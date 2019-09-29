@@ -1,0 +1,68 @@
+phase 1
+
+Για να δημιουργήσω το ευρετήριο στην ElasticSearch πρέπει πρώτα να μετατραπούν τα documents(δοθέντα 18316 αρχεία) στην κατάλληλη XML μορφή και μετά σε ένα αρχείο JSON ,ώστε να ανέβουν στην ElasticSearch μέσω curl.
+Στην κλάση XML_JSON μετατρέπω τα αρχεία XML με ενοποιημένα τα πεδία title και objectives σε ένα πεδίο,το text.
+Αποθηκεύονται τα νέα αρχεία και μετά στην ίδια κλάση τα ενώνω σε ένα αρχείο JSON με τη μορφή που απαιτεί το curl(Το αρχείο αυτό είναι το projects.json).
+Aνοίγω το Kibana και δημιουργώ το ευρετήριο projects.Θέτω similarity ΒΜ25 και χρησιμοποιώ τον english analyzer ,ο οποίος παρέχει convert_to_lowercase,stopword_removal και stemming.
+Ανοίγω το command line και εκτελώ την ακόλουθη εντολή για να προσθέσω τα documents στο ευρετήριο,δηλαδή το projects.json :
+curl -H "Content-Type: application/json" -XPOST "localhost:9200/projects/project/_bulk?pretty&refresh" --data-binary "@C:\Users\Demetra\Desktop\Documents\NEW_XMLS\JSON_FILE\projects.json".
+Τώρα,στην κλάση JSON_queries μετατρέπω τα ερωτήματα που δόθηκαν(testingQueries.txt) σε ξεχωριστά αρχεία JSON ,ώστε να τεθούν στο curl.
+Προσέχω να ζητάω τα 20 κοντινότερα κείμενα και να μη πάρω ως αποτέλεσμα το ίδιο το query ,για αυτό στην κλάση θέτω στο query στο πεδίο from=1 και στο size=20. 
+Έτσι ,δημιουργούνται τα αρχεία json_query1.json,json_query2.json κλπ. 
+Για κάθε query ,τα αποτελέσματα γίνονται export σε αρχεία μορφής json και πιο συγκεκριμένα με το όνομα results_query1.json,results_query2.json κλπ.
+Η εντολη για αυτό είναι: curl -H "Content-Type: application/json" -X POST localhost:9200/projects/_search?pretty -d "@C:/Users/Demetra/Desktop/json_queries/json_query1.json"> results_query1.json.
+
+Πλέον,έχω τα αποτέλεσματα κάθε ερωτήματος σε αρχεία json.
+Στην κλάση TREC_EVAL_MYRESULTS παίρνω αυτά τα αρχεία και διαμορφώνω το your_results_file.txt που είναι το αρχείο για την trec_eval.
+Ανοίγω το Cygwin64 Terminal για να τρέξω την trec_eval. Έχω το your_results_file.txt και το qrels.txt(δοθέντα σωστά results) στον ίδιο φάκελο μαζί με την trec_eval.
+Τρέχω τις δύο εντολές πρώτα για MAP και μετά για μέση ακρίβεια στα k=5,10,15,20 πρώτα ανακτηθέντα κείμενα και κάνω export τα αποτελέσματά στα αρχεία MAP_eval.txt και P_5_eval.txt αντίστοιχα:
+• trec_eval -q -m map path/qrels.txt path/your_results_file.txt > path/MAP_eval.txt
+• trec_eval -q -m P.5,10,15,20 path/qrels.txt path/your_results_file.txt > path/P_5_eval.txt
+Έτσι,έχουμε τα αποτέλεσματα για την αξιολόγηση.
+
+phase 2
+
+(a)Διαμορφώνω τους φακέλους με τα αρχεία που περιέχουν τις φράσεις από τα αρχεία μιας δοθείσας Collection_1.
+Έχω τρεις φακέλους : Percentage_30,Percentage_60 και Percentage_90 για τα ποσοστά 30%,60% και 90% αντίστοιχα.
+Με την κλάση new_queries αποθηκεύω σε κάθε φάκελο τα νέα αρχεία(new_Q01.txt,new_Q02.txt,…) που έχουν το συγκεκριμένο ποσοστό φράσεων των αντιστοίχων txt κειμένων.
+Έτσι,έχω τα τρία σύνολα ερωτημάτων στους προαναφερθέντες φακέλους.
+Για να θέσω τα ερωτήματα στην ElasticSearch με curl ,πρέπει να τα μετατρέψω σε μορφή JSON για αυτό χρησιμοποιώ την κλάση convert_txtToJSON.
+Μέσα σε αυτήν την κλάση,ανοίγω κάθε φάκελο “Percentage_%” με τα ερωτήματα και τα μετατρέπω σε JSON query για να τεθούν στην ElasticSearch. 
+Τα JSON queries αποθηκεύονται ανάλογα με το ποσοστό σε έναν από τους τρεις φακέλους που έχω δημιουργήσει με ονόματα: JSON_30,JSON_60,JSON_90. 
+Προσέχω να ζητάω τα 20 κοντινότερα κείμενα ,για αυτό στην κλάση θέτω στο query στο πεδίο from=0 και στο size=20. 
+Τα αρχεία έχουν για κάθε φάκελο τα ονόματα JSON_new_Q01.json,JSON_new_Q02.json,… .Πλέον,μπορώ να θέσω τα νέα ερωτήματα. 
+Για κάθε σύνολο ερωτημάτων εκτελείται η εντολή στο curl για τα ερωτήματα που διαμόρφωσα,καθώς και το export των αποτελεσμάτων σε  αρχεία txt με ονόματα result_1.txt,result_2.txt,result_3.txt,… σε φακέλους Results_queries_30,Results_queries_60,Results_queries_90:
+π.χ. curl -H "Content-Type: application/json" -XPOST localhost:9200/projects/_search?pretty -d "@C:/Users/Demetra/Desktop/JSON_30/JSON_new_Q01.json"> results_1.json.
+Πλέον,έχω τα αποτελέσματα κάθε ερωτήματος κάθε συνόλου σε αρχεία json στους φακέλους Results_queries_30,Results_queries_60,Results_queries_90.
+Στην κλάση Trec_Eval παίρνω αυτά τα αρχεία και διαμορφώνω τα your_results_file30.txt, your_results_file60.txt, your_results_file90.txt που είναι τα αρχεία για την αξιολόγηση με trec_eval.
+
+Ανοίγω το Cygwin64 Terminal για να τρέξω την trec_eval. Έχω τα your_results_file30.txt, your_results_file60.txt, your_results_file90.txt και το qrels.txt(δοθέντα σωστά results) στον ίδιο φάκελο μαζί με την trec_eval.
+Τρέχω τις εντολές πρώτα για MAP και μετά για μέση ακρίβεια στα k=5,10,15,20 πρώτα ανακτηθέντα κείμενα και κάνω export τα αποτελέσματά στα αρχεία MAP_eval30.txt,MAP_eval60.txt,MAP_eval90.txt  και P_eval30.txt, P_eval60.txt, P_eval90.txt αντίστοιχα:
+• trec_eval -q -m map path/qrels.txt path/your_results_file%.txt > path/MAP_eval%.txt
+• trec_eval -q -m P.5,10,15,20 path/qrels.txt path/your_results_file%.txt > path/P_eval%.txt 					, όπου % το ποσοστό.
+Έτσι,έχουμε τα αποτέλεσματα για την αξιολόγηση.
+
+(b)Έφτιαξα την κλάση JSON_queries_MLT στην οποία παίρνω το αρχείο με τα ερωτήματα ,τα χωρίζω και δημιουργώ queries σε μορφή JSON για να μπορούν να τεθούν στην ElasticSearch με curl.
+Η μορφή κάθε ερωτήματος γίνεται με βάση το More Like This Query και περιέχει τις παραμέτρους που ζητούνται.
+Ανάλογα με το πόσο ισχυρά ή όχι θέλω τα ερωτήματα,αλλάζω τις τιμές των παραμέτρων ή αν θέλω τις default τιμές ,βάζω απλά τις παραμέτρους σε σχόλια.
+Εκτελώ τον κώδικα τέσσερις φορές. Μία φορά για τις default τιμές και άλλες τρεις φορές με δικές μου τιμές.
+Έτσι, για κάθε περίπτωση δημιουργώ 10 αρχεία json και τα αποθηκεύω σε έναν φάκελο json_queries_περίπτωση. Οι περιπτώσεις διακρίνονται σε :
+• default: Εκτελείται η main και οι παράμετροι είναι σε σχόλια ,ώστε να χρησιμοποιηθούν οι τιμές που δίνει μόνη της η ElasticSearch.
+• less: Αυτό είναι το λιγότερο ισχυρό ερώτημα. Οι παράμετροι έχουν τις ακόλουθες τιμές : max_query_terms=25,min_term_freq=4,min_doc_freq=500,
+max_doc_freq=1000,minimum_should_match=20%.
+• medium: Αυτό το ερώτημα είναι πιο ισχυρό από το less ,αφού μειώνω το min_term_freq και αγνοεί περισσότερο τις πιο συνήθεις λέξεις ,γιατί μειώνω το max_doc_freq,καθώς επίσης και επιτυγχάνει μεγαλύτερη ακρίβεια με αύξηση του minimum_should_match.
+Οι παράμετροι έχουν τις ακόλουθες τιμές : max_query_terms=25,min_term_freq=2,min_doc_freq=50,
+max_doc_freq=100,minimum_should_match=40%.
+• powerful: Πιο ισχυρό ερώτημα από τα less και medium. Με την ίδια λογική, μείωσα τα min_term_freq και max_doc_freq ,ενώ αύξησα το minimum_should_match. Οι παράμετροι έχουν τις ακόλουθες τιμές : max_query_terms=25,min_term_freq=1,min_doc_freq=5,
+max_doc_freq=10,minimum_should_match=50%.
+Πλέον ,μπορώ να θέσω τα ερωτήματα για κάθε περίπτωση στην ElasticSearch.
+Για κάθε σύνολο ερωτημάτων εκτελείται η εντολή στο curl για τα ερωτήματα που διαμόρφωσα,καθώς και το export των αποτελεσμάτων σε  αρχεία txt με ονόματα      results1.txt,results2.txt,results3.txt,… σε φακέλους results_default,results_less,results_medium,results_powerful:
+π.χ. curl -H "Content-Type: application/json" -XPOST localhost:9200/projects/_search?pretty -d "@C:/Users/Demetra/Desktop/json_queries_default/json_query1.json"> results_1.json.
+Έχω τα αποτελέσματα κάθε ερωτήματος κάθε συνόλου σε αρχεία json στους φακέλους results_default,results_less,results_medium,results_powerful.
+Στην κλάση Trec_Eval_b παίρνω αυτά τα αρχεία και διαμορφώνω τα your_results_file_default.txt, your_results_file_less.txt, your_results_file_medium.txt,your_results_file_powerful.txt που είναι τα αρχεία για την αξιολόγηση με trec_eval.
+
+Ανοίγω το Cygwin64 Terminal για να τρέξω την trec_eval. Έχω τα your_results_file_default.txt, your_results_file_less.txt, your_results_file_medium.txt, your_results_file_powerful.txt και το qrels.txt στον ίδιο φάκελο μαζί με την trec_eval.
+Τρέχω τις εντολές για MAP και για μέση ακρίβεια στα k=5,10,15,20 πρώτα ανακτηθέντα κείμενα και κάνω export τα αποτελέσματά στα αρχεία MAP_περίπτωση_eval.txt και P_περίπτωση_eval.txt αντίστοιχα: 
+• trec_eval -q -m map path/qrels.txt path/your_results_file_περίπτωση.txt > path/MAP_περίπτωση_eval.txt 
+• trec_eval -q -m P.5,10,15,20 path/qrels.txt path/your_results_file_περίπτωση.txt > path/P_περίπτωση_eval.txt
+Έτσι,έχουμε τα αποτέλεσματα για την αξιολόγηση.
